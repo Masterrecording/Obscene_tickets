@@ -102,7 +102,10 @@ async def execute_setup(ctx: commands.Context,
         "category_name": category_name,
         "title": ticket_title,
         "description": ticket_description,
-        "ticket_message": ticket_message
+        "ticket_message": ticket_message,
+        "number_of_tickets": 0,
+        "opened_tickets": {
+        }
 }
         with open("./storage/tickets.json", "r+") as ticket_file:
             ticket_data = json.load(ticket_file)
