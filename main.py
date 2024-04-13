@@ -20,8 +20,6 @@ class Create_Ticket_Button(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction):
         tickets = json.load(open("./storage/tickets.json", "r"))
         data = tickets[str(interaction.message.id)]
-        print(interaction.user.id)
-        print(data["opened_tickets"])
         if str(interaction.user.id) in data["opened_tickets"].keys():
             await interaction.response.send_message("Ya tienes un ticket abierto pendiente", ephemeral=True)
         else:
