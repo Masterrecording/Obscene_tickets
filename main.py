@@ -18,8 +18,36 @@ class Create_Ticket_Button(discord.ui.Button):
         super().__init__(label=label, style=style)
 
     async def callback(self, interaction: discord.Interaction):
-        data = json.load(open("./storage/tickets.json", "r"))[str(interaction.message.id)]
-        print(data)
+        tickets = json.load(open("./storage/tickets.json", "r"))
+        data = tickets[str(interaction.message.id)]
+        print(interaction.user.id)
+        print(data["opened_tickets"])
+        if str(interaction.user.id) in data["opened_tickets"].keys():
+            await interaction.response.send_message("Ya tienes un ticket abierto pendiente", ephemeral=True)
+        else:
+            server = interaction.guild
+            TICKET_NAME = f"ticket-{data["number_of_tickets"]:04d}"
+            if data["category_name"] == "":
+                channel = await server.create_text_channel(name=TICKET_NAME)
+            else: 
+                for i in server.categories: 
+                    if i.name == data["category_name"]:
+                        channel = await i.create_text_channel(name=TICKET_NAME)
+
+            embed = discord.Embed(
+                title=data["ticket_title"],
+                description=data["ticket_description"]
+            )
+
+            await channel.send(data["ticket_message"], embed=embed)
+
+            data["number_of_tickets"]+=1
+            data["opened_tickets"][str(interaction.user.id)] = channel.id
+            tickets[str(interaction.message.id)] = data
+            await interaction.response.send_message(f"Ticket created, check {channel.mention}", ephemeral=True, delete_after=15.00)
+            with open("./storage/tickets.json", "w") as tickets_file:
+                json.dump(tickets, tickets_file, indent=4)
+        
 
 async def reload_buttons(messages_to_keep = {}):
     with open("./storage/tickets.json", "r") as tickets_file:
@@ -100,8 +128,8 @@ async def execute_setup(ctx: commands.Context,
 
         data = {
         "category_name": category_name,
-        "title": ticket_title,
-        "description": ticket_description,
+        "ticket_title": ticket_title,
+        "ticket_description": ticket_description,
         "ticket_message": ticket_message,
         "number_of_tickets": 0,
         "opened_tickets": {
