@@ -1,7 +1,9 @@
 from discord.ext import commands
 import discord.ext
 import discord
+import discord.ext.commands
 import dotenv
+import asyncio
 import json
 import os
 
@@ -93,6 +95,51 @@ async def on_ready():
     await reload_buttons()
     print("All the tickets have been loaded!")
 
+@bot.command(name="setadmin", description="Set the ticket admin role for the server")
+async def execute_setadmin(ctx: discord.Interaction, role: discord.Role):
+    if ctx.author.guild_permissions.administrator: 
+        try:
+            with open('./storage/servers.json', 'r+') as servers_file:
+                servers_data = json.load(servers_file)
+                servers_data[str(ctx.guild.id)] = str(role.id) 
+                servers_file.seek(0)
+                json.dump(servers_data, servers_file, indent=4)
+                await ctx.reply("Se ha actualizado el rol de administrador correctamente!", ephemeral=True)
+        except Exception as e:
+            await ctx.reply(f"Se ha producido un error {e}")
+    else:
+        await ctx.reply("You are not allowed to do this.", ephemeral=True)
+
+async def is_admin(ctx: discord.ext.commands.Context) -> bool:
+    if ctx.guild.get_role(
+        json.load(open('./storage/servers.json', 'r'))[int(ctx.guild.id)]
+      ) in ctx.user.roles:
+        return True
+    elif ctx.author.guild_permissions.administrator:
+        return True
+    else: return False
+        
+async def is_ticket(ctx: discord.ext.commands.Context) -> bool:
+    tickets == json.load(open('./storage/tickets.json', 'r'))
+    for ticket in tickets:
+        for channel_id in tickets[i]['opened_tickets'].keys():
+            if channel_id == ctx.channel.id
+            return True
+    else:
+        return False
+        
+
+@bot.command(name="close", description="Close the current ticket")
+async def excecute_close(ctx: discord.ext.commands.Context, reason: str | None):
+    if is_admin(ctx) and is_ticket():
+        ctx.message.send(f'Ticket closed by {ctx.author.mention}')
+        ctx.message.send("Closing in 5s")
+        await asyncio.sleep(5)
+        await ctx.channel.delete()
+    else:
+        ctx.message.reply('No tienes permisos para hacer eso')
+
+        
 
 @bot.command(name="setup", description="Create a new ticket system and send the ticket message")
 async def execute_setup(ctx: commands.Context,
