@@ -1,9 +1,9 @@
 from discord.ext import commands
+import discord.ext.commands
 import discord.ext
 import discord
-import discord.ext.commands
-import dotenv
 import asyncio
+import dotenv
 import json
 import os
 
@@ -21,18 +21,26 @@ class Create_Ticket_Button(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction):
         tickets = json.load(open("./storage/tickets.json", "r"))
+        servers = json.load(open("./storage/servers.json", "r"))
         data = tickets[str(interaction.message.id)]
         if str(interaction.user.id) in data["opened_tickets"].keys():
             await interaction.response.send_message("Ya tienes un ticket abierto pendiente", ephemeral=True)
         else:
             server = interaction.guild
-            TICKET_NAME = f"ticket-{data["number_of_tickets"]:04d}"
+            admin_role_id = servers[str(server.id)]
+            TICKET_NAME = f'ticket-{data["number_of_tickets"]:04d}'
+            
+            overwrites = {
+    server.default_role: discord.PermissionOverwrite(read_messages=False),
+    server.get_role(int(admin_role_id)): discord.PermissionOverwrite(read_messages=True)
+}
+            
             if data["category_name"] == "":
-                channel = await server.create_text_channel(name=TICKET_NAME)
+                channel = await server.create_text_channel(name=TICKET_NAME, overwrites=overwrites)
             else: 
                 for i in server.categories: 
                     if i.name == data["category_name"]:
-                        channel = await i.create_text_channel(name=TICKET_NAME)
+                        channel = await i.create_text_channel(name=TICKET_NAME, overwrites=overwrites)
 
             embed = discord.Embed(
                 title=data["ticket_title"],
@@ -112,34 +120,40 @@ async def execute_setadmin(ctx: discord.Interaction, role: discord.Role):
 
 async def is_admin(ctx: discord.ext.commands.Context) -> bool:
     if ctx.guild.get_role(
-        json.load(open('./storage/servers.json', 'r'))[int(ctx.guild.id)]
-      ) in ctx.user.roles:
+        json.load(open('./storage/servers.json', 'r'))[str(ctx.guild.id)]
+      ) in ctx.author.roles:
         return True
     elif ctx.author.guild_permissions.administrator:
         return True
     else: return False
         
 async def is_ticket(ctx: discord.ext.commands.Context) -> bool:
-    tickets == json.load(open('./storage/tickets.json', 'r'))
+    tickets = json.load(open('./storage/tickets.json', 'r'))
     for ticket in tickets:
-        for channel_id in tickets[i]['opened_tickets'].keys():
-            if channel_id == ctx.channel.id
-            return True
-    else:
-        return False
+        for channel_id in tickets[ticket]['opened_tickets']:
+            if tickets[ticket]['opened_tickets'][channel_id] == ctx.channel.id:
+                return True, ticket, channel_id
+    return False, None, None
         
 
 @bot.command(name="close", description="Close the current ticket")
 async def excecute_close(ctx: discord.ext.commands.Context, reason: str | None):
-    if is_admin(ctx) and is_ticket():
-        ctx.message.send(f'Ticket closed by {ctx.author.mention}')
-        ctx.message.send("Closing in 5s")
-        await asyncio.sleep(5)
-        await ctx.channel.delete()
+    ticket, ticket_id, user_id = await is_ticket(ctx)
+    if await is_admin(ctx): 
+        if ticket:
+            await ctx.send(f"{ctx.author.mention} Ha cerrado el ticket, borrando en 5s")
+            await asyncio.sleep(5)
+            await ctx.channel.delete()
+            with open('./storage/tickets.json', 'r+') as tickets_file:
+                data = json.load(tickets_file)
+                data[ticket_id]['opened_tickets'].pop(user_id)
+                tickets_file.seek(0)
+                tickets_file.truncate()
+                json.dump(data, tickets_file, indent=4)
+        else:
+            await ctx.message.reply("Este no es un ticket :/")
     else:
-        ctx.message.reply('No tienes permisos para hacer eso')
-
-        
+        await ctx.message.reply(f"No tienes permisos para hacer esto {ctx.user.mention}")
 
 @bot.command(name="setup", description="Create a new ticket system and send the ticket message")
 async def execute_setup(ctx: commands.Context,
