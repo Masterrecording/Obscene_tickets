@@ -32,7 +32,8 @@ class Create_Ticket_Button(discord.ui.Button):
             
             overwrites = {
     server.default_role: discord.PermissionOverwrite(read_messages=False),
-    server.get_role(int(admin_role_id)): discord.PermissionOverwrite(read_messages=True)
+    server.get_role(int(admin_role_id)): discord.PermissionOverwrite(read_messages=True),
+    interaction.user: discord.PermissionOverwrite(read_messages=True)
 }
             
             if data["category_name"] == "":
@@ -120,7 +121,7 @@ async def execute_setadmin(ctx: discord.Interaction, role: discord.Role):
 
 async def is_admin(ctx: discord.ext.commands.Context) -> bool:
     if ctx.guild.get_role(
-        json.load(open('./storage/servers.json', 'r'))[str(ctx.guild.id)]
+        int(json.load(open('./storage/servers.json', 'r'))[str(ctx.guild.id)])
       ) in ctx.author.roles:
         return True
     elif ctx.author.guild_permissions.administrator:
@@ -153,7 +154,7 @@ async def excecute_close(ctx: discord.ext.commands.Context, reason: str | None):
         else:
             await ctx.message.reply("Este no es un ticket :/")
     else:
-        await ctx.message.reply(f"No tienes permisos para hacer esto {ctx.user.mention}")
+        await ctx.message.reply(f"No tienes permisos para hacer esto {ctx.author.mention}")
 
 @bot.command(name="setup", description="Create a new ticket system and send the ticket message")
 async def execute_setup(ctx: commands.Context,
