@@ -1,4 +1,5 @@
 from discord.ext import commands
+from colorama import Fore, Style
 import discord.ext.commands
 import discord.ext
 import discord
@@ -99,6 +100,8 @@ def delete_entry_from_json(file_path, entry_id):
 
 @bot.event
 async def on_ready():
+    print('Loading slash commands...')
+    await bot.tree.sync()
     print(f'We have logged in as {bot.user}')
     print("Loadding all the tickets...")
     await reload_buttons()
@@ -155,6 +158,51 @@ async def excecute_close(ctx: discord.ext.commands.Context, reason: str | None):
             await ctx.message.reply("Este no es un ticket :/")
     else:
         await ctx.message.reply(f"No tienes permisos para hacer esto {ctx.author.mention}")
+
+@bot.tree.command(name='setup', description="Create a new ticket systen and send the ticket message")
+async def execute_setup_slash(ctx: discord.Interaction,
+                              title: str | None,
+                              description: str | None,
+                              category_name: str | None,
+                              ticket_title: str | None,
+                              ticket_description: str | None,
+                              ticket_message: str | None):
+        
+    if title is None: title = "Welcome to the ticket system"
+    if description is None: description = "Click on the button below to create a ticket!"
+    if category_name is None: category_name = ""
+    if ticket_title is None: ticket_title = "Welcome"
+    if ticket_description is None: ticket_description = "Wait until you recive suport from our staff"
+    if ticket_message is None: ticket_message = ""
+    create_ticket = Create_Ticket_Button()
+
+    new_embed = discord.Embed(title=title, description=description)
+    message = await ctx.response.send_message(embed=new_embed, view=discord.ui.View().add_item(item=create_ticket))
+    with open("./storage/channels.json", "r+") as channels_file:
+        channels_data = json.load(channels_file)
+        try:
+            channels_data[str(ctx.channel.id)]
+        except: 
+            channels_data[str(ctx.channel.id)] = ctx.channel.name
+            channels_file.seek(0)
+            json.dump(channels_data, channels_file, indent=4)
+            channels_file.truncate()
+
+    data = {
+    "category_name": category_name,
+    "ticket_title": ticket_title,
+    "ticket_description": ticket_description,
+    "ticket_message": ticket_message,
+    "number_of_tickets": 0,
+    "opened_tickets": {
+    }
+}
+    with open("./storage/tickets.json", "r+") as ticket_file:
+        ticket_data = json.load(ticket_file)
+        ticket_data[str(message.id)] = data
+        ticket_file.seek(0)
+        json.dump(ticket_data, ticket_file, indent=4)
+        ticket_file.truncate()
 
 @bot.command(name="setup", description="Create a new ticket system and send the ticket message")
 async def execute_setup(ctx: commands.Context,
