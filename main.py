@@ -25,13 +25,18 @@ class Create_Ticket_Button(discord.ui.Button):
         tickets = json.load(open("./storage/tickets.json", "r"))
         servers = json.load(open("./storage/servers.json", "r"))
         data = tickets[str(interaction.message.id)]
+        valid_category = False
         if str(interaction.user.id) in data["opened_tickets"].keys():
             await interaction.response.send_message("Ya tienes un ticket abierto pendiente", ephemeral=True)
         else:
-            server = interaction.guild
-            admin_role_id = servers[str(server.id)]
-            TICKET_NAME = f'ticket-{data["number_of_tickets"]:04d}'
-            
+            try:
+                server = interaction.guild
+                admin_role_id = servers[str(server.id)]
+                TICKET_NAME = f'ticket-{data["number_of_tickets"]:04d}'
+            except:
+                await interaction.response.send_message("You need to specify the admin role (use: setadmin command)", ephemeral=True)
+                return
+
             overwrites = {
     server.default_role: discord.PermissionOverwrite(read_messages=False),
     server.get_role(int(admin_role_id)): discord.PermissionOverwrite(read_messages=True),
@@ -44,6 +49,9 @@ class Create_Ticket_Button(discord.ui.Button):
                 for i in server.categories: 
                     if i.name == data["category_name"]:
                         channel = await i.create_text_channel(name=TICKET_NAME, overwrites=overwrites)
+                        valid_category = True
+                if valid_category == False: return await interaction.response.send_message(
+                    "No se encuentra la caterogría especificada", ephemeral=True)
 
             embed = discord.Embed(
                 title=data["ticket_title"],
@@ -59,7 +67,7 @@ class Create_Ticket_Button(discord.ui.Button):
             with open("./storage/tickets.json", "w") as tickets_file:
                 json.dump(tickets, tickets_file, indent=4)
         
-def printf(text, level="INFO"):
+async def printf(text, level="INFO"):
     date = datetime.datetime.now()
     formatted_date = date.strftime("%Y-%m-%d %H:%M:%S")
     current_datetime = (f"{Fore.BLACK}{Style.BRIGHT}{formatted_date[:10]}{Style.RESET_ALL}"f" {Fore.BLACK}{Style.BRIGHT}{formatted_date[11:19]}{Style.RESET_ALL}")
@@ -77,8 +85,8 @@ async def reload_buttons(messages_to_keep = {}):
             try:
                 channel = await bot.fetch_channel(int(channel_id))
             except discord.errors.NotFound:
-                printf(f"[-] Channel {channel_id} not found")
-                delete_entry_from_json("./storage/channels.json", channel_id)
+                await printf(f"[-] Channel {channel_id} not found")
+                await delete_entry_from_json("./storage/channels.json", channel_id)
                 continue
 
             try:
@@ -91,28 +99,30 @@ async def reload_buttons(messages_to_keep = {}):
 
     with open("./storage/tickets.json", "w") as tickets_file:
         json.dump(messages_to_keep, tickets_file, indent=4)
-        printf("[+] Successfully updated tickets JSON.")
+        await printf("[+] Successfully updated tickets JSON.")
 
-def delete_entry_from_json(file_path, entry_id):
+async def delete_entry_from_json(file_path, entry_id):
     with open(file_path, "r") as json_file:
         data = json.load(json_file)
     if entry_id in data:
         del data[entry_id]
         with open(file_path, "w") as json_file:
             json.dump(data, json_file, indent=4)
-            printf("[+] Entry deleted from JSON successfully.")
+            await printf("[+] Entry deleted from JSON successfully.")
     else:
-        printf("[-] Entry not found in JSON.")
+        await printf("[-] Entry not found in JSON.")
 
 
 @bot.event
 async def on_ready():
-    printf('Loading slash commands...')
+    await printf(f'We have logged in as {bot.user}')
+    await printf('Loading slash commands...')
     await bot.tree.sync()
-    printf(f'We have logged in as {bot.user}')
-    printf("Loadding all the tickets...")
+    await printf("Loadding all the tickets...")
     await reload_buttons()
-    printf("All the tickets have been loaded!")
+    await printf("All the tickets have been loaded!")
+    await asyncio.sleep(3.0)
+    await printf(f"{Fore.LIGHTGREEN_EX}All the bot have been loaded successfully"+Style.RESET_ALL)
 
 @bot.command(name="setadmin", description="Set the ticket admin role for the server")
 async def execute_setadmin(ctx: discord.Interaction, role: discord.Role):
@@ -184,7 +194,8 @@ async def execute_setup_slash(ctx: discord.Interaction,
     create_ticket = Create_Ticket_Button()
 
     new_embed = discord.Embed(title=title, description=description)
-    message = await ctx.response.send_message(embed=new_embed, view=discord.ui.View().add_item(item=create_ticket))
+    message = await ctx.channel.send(embed=new_embed, view=discord.ui.View().add_item(item=create_ticket))
+    await ctx.response.send_message("Done!", ephemeral=True, delete_after=3.0)
     with open("./storage/channels.json", "r+") as channels_file:
         channels_data = json.load(channels_file)
         try:
