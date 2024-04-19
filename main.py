@@ -2,6 +2,7 @@ from discord.ext import commands
 from colorama import Fore, Style
 import discord.ext.commands
 import discord.ext
+import datetime
 import discord
 import asyncio
 import dotenv
@@ -58,6 +59,12 @@ class Create_Ticket_Button(discord.ui.Button):
             with open("./storage/tickets.json", "w") as tickets_file:
                 json.dump(tickets, tickets_file, indent=4)
         
+def printf(text, level="INFO"):
+    date = datetime.datetime.now()
+    formatted_date = date.strftime("%Y-%m-%d %H:%M:%S")
+    current_datetime = (f"{Fore.BLACK}{Style.BRIGHT}{formatted_date[:10]}{Style.RESET_ALL}"f" {Fore.BLACK}{Style.BRIGHT}{formatted_date[11:19]}{Style.RESET_ALL}")
+    msg = (f"{current_datetime} "f"{Fore.BLUE}{Style.BRIGHT}{level:<8}{Style.RESET_ALL} "f"{text}")
+    print(msg)
 
 async def reload_buttons(messages_to_keep = {}):
     with open("./storage/tickets.json", "r") as tickets_file:
@@ -70,7 +77,7 @@ async def reload_buttons(messages_to_keep = {}):
             try:
                 channel = await bot.fetch_channel(int(channel_id))
             except discord.errors.NotFound:
-                print(f"[-] Channel {channel_id} not found")
+                printf(f"[-] Channel {channel_id} not found")
                 delete_entry_from_json("./storage/channels.json", channel_id)
                 continue
 
@@ -84,7 +91,7 @@ async def reload_buttons(messages_to_keep = {}):
 
     with open("./storage/tickets.json", "w") as tickets_file:
         json.dump(messages_to_keep, tickets_file, indent=4)
-        print("[+] Successfully updated tickets JSON.")
+        printf("[+] Successfully updated tickets JSON.")
 
 def delete_entry_from_json(file_path, entry_id):
     with open(file_path, "r") as json_file:
@@ -93,19 +100,19 @@ def delete_entry_from_json(file_path, entry_id):
         del data[entry_id]
         with open(file_path, "w") as json_file:
             json.dump(data, json_file, indent=4)
-            print("[+] Entry deleted from JSON successfully.")
+            printf("[+] Entry deleted from JSON successfully.")
     else:
-        print("[-] Entry not found in JSON.")
+        printf("[-] Entry not found in JSON.")
 
 
 @bot.event
 async def on_ready():
-    print('Loading slash commands...')
+    printf('Loading slash commands...')
     await bot.tree.sync()
-    print(f'We have logged in as {bot.user}')
-    print("Loadding all the tickets...")
+    printf(f'We have logged in as {bot.user}')
+    printf("Loadding all the tickets...")
     await reload_buttons()
-    print("All the tickets have been loaded!")
+    printf("All the tickets have been loaded!")
 
 @bot.command(name="setadmin", description="Set the ticket admin role for the server")
 async def execute_setadmin(ctx: discord.Interaction, role: discord.Role):
