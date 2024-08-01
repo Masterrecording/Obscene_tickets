@@ -1,3 +1,7 @@
+# Author: github.com/Masterreccording
+# Copyright: LICENSE
+# Version: 2.0
+
 from discord.ext import commands
 from colorama import Fore, Style
 import discord.ext.commands
@@ -124,20 +128,20 @@ async def on_ready():
     await asyncio.sleep(3.0)
     await printf(f"{Fore.LIGHTGREEN_EX}All the bot have been loaded successfully"+Style.RESET_ALL)
 
-@bot.command(name="setadmin", description="Set the ticket admin role for the server")
+@bot.tree.command(name="setadmin", description="Set the ticket admin role for the server")
 async def execute_setadmin(ctx: discord.Interaction, role: discord.Role):
-    if ctx.author.guild_permissions.administrator: 
+    if ctx.user.guild_permissions.administrator: 
         try:
             with open('./storage/servers.json', 'r+') as servers_file:
                 servers_data = json.load(servers_file)
                 servers_data[str(ctx.guild.id)] = str(role.id) 
                 servers_file.seek(0)
                 json.dump(servers_data, servers_file, indent=4)
-                await ctx.reply("Se ha actualizado el rol de administrador correctamente!", ephemeral=True)
+                await ctx.response.send_message("Se ha actualizado el rol de administrador correctamente!", ephemeral=True)
         except Exception as e:
-            await ctx.reply(f"Se ha producido un error {e}")
+            await ctx.response.send_message(f"Se ha producido un error {e}", ephemeral=True)
     else:
-        await ctx.reply("You are not allowed to do this.", ephemeral=True)
+        await ctx.response.send_message("You are not allowed to do this.", ephemeral=True)
 
 async def is_admin(ctx: discord.ext.commands.Context) -> bool:
     if ctx.guild.get_role(
@@ -157,7 +161,10 @@ async def is_ticket(ctx: discord.ext.commands.Context) -> bool:
     return False, None, None
 
 @bot.tree.command(name="close", description="Close the current ticket")
-async def execute_close_slash(ctx: discord.ext.commands.Context, reason: str | None):
+async def execute_close_slash(ctx: discord.Interaction, reason: str | None):
+
+    if not ctx.guild: return await ctx.response.send_message("This is not a ticket") 
+
     ticket, ticket_id, user_id = await is_ticket(ctx)
     if await is_admin(ctx):
         if ticket:
@@ -177,6 +184,9 @@ async def execute_close_slash(ctx: discord.ext.commands.Context, reason: str | N
 
 @bot.command(name="close", description="Close the current ticket")
 async def excecute_close(ctx: discord.ext.commands.Context, reason: str | None):
+
+    if not ctx.guild: return await ctx.send("This is not a ticket")
+
     ticket, ticket_id, user_id = await is_ticket(ctx)
     if await is_admin(ctx): 
         if ticket:
@@ -203,6 +213,8 @@ async def execute_setup_slash(ctx: discord.Interaction,
                               ticket_description: str | None,
                               ticket_message: str | None):
         
+    if not ctx.guild: return await ctx.response.send_message("This is not a server", ephemeral=True)
+
     if title is None: title = "Welcome to the ticket system"
     if description is None: description = "Click on the button below to create a ticket!"
     if category_name is None: category_name = ""
@@ -248,6 +260,8 @@ async def execute_setup(ctx: commands.Context,
                         ticket_title: str | None,
                         ticket_description: str | None,
                         ticket_message: str | None):
+
+    if not ctx.guild: return await ctx.send("This is not a server.")
 
     if ctx.author.guild_permissions.administrator:
         if title is None: title = "Welcome to the ticket system"
