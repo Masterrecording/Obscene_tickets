@@ -1,6 +1,6 @@
 # Author: github.com/Masterreccording
 # Copyright: LICENSE
-# Version: 2.1
+# Version: 2.2
 
 from discord.ext import commands
 from colorama import Fore, Style
@@ -110,7 +110,7 @@ async def reload_buttons(messages_to_keep = {}):
 
     with open("./storage/tickets.json", "w") as tickets_file:
         json.dump(messages_to_keep, tickets_file, indent=4)
-        await printf("[+] Successfully updated tickets JSON.")
+        await printf("[+] Tickets loaded succesfully.")
 
 async def delete_entry_from_json(file_path, entry_id):
     with open(file_path, "r") as json_file:
@@ -123,12 +123,33 @@ async def delete_entry_from_json(file_path, entry_id):
     else:
         await printf("[-] Entry not found in JSON.")
 
+async def validate_storage():
+    if not os.path.isdir("storage"): 
+        await printf("[-] Storage directory does not exist, creating it.")
+        os.mkdir("storage")
+
+    if not os.path.exists("storage/channels.json"): 
+        await printf("[-] file channels.json does not exist, creating it.")
+        open("storage/channels.json",'w').write("{}")
+
+    if not os.path.exists("storage/servers.json"): 
+        await printf("[-] file servers.json does not exist, creating it.")
+        open("storage/servers.json",'w').write("{}")
+
+    if not os.path.exists("storage/tickets.json"): 
+        await printf("[-] File tickets.json does not exist, creating it.")
+        open("storage/tickets.json",'w').write("{}")
+    
+    await printf("[+] All storage files are existing.")
 
 @bot.event
 async def on_ready():
     await printf(f'We have logged in as {bot.user}')
+    await printf("Validating storage files...")
+    await validate_storage()
     await printf('Loading slash commands...')
     await bot.tree.sync()
+    await printf("[+] Slash commands loaded successfully.")
     await printf("Loadding all the tickets...")
     await reload_buttons()
     await printf(f"{Fore.LIGHTGREEN_EX}All the tickets have been loaded!"+Style.RESET_ALL)
