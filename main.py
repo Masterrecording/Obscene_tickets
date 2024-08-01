@@ -155,7 +155,25 @@ async def is_ticket(ctx: discord.ext.commands.Context) -> bool:
             if tickets[ticket]['opened_tickets'][channel_id] == ctx.channel.id:
                 return True, ticket, channel_id
     return False, None, None
-        
+
+@bot.tree.command(name="close", description="Close the current ticket")
+async def execute_close_slash(ctx: discord.ext.commands.Context, reason: str | None):
+    ticket, ticket_id, user_id = await is_ticket(ctx)
+    if await is_admin(ctx):
+        if ticket:
+            await ctx.send(f"{ctx.user.mention} Ha cerrado el ticket, borrando en 5s")
+            await asyncio.sleep(5)
+            await ctx.channel.delete()
+            with open('./storage/tickets.json', 'r+') as tickets_file:
+                data = json.load(tickets_file)
+                data[ticket_id]['opened_tickets'].pop(user_id)
+                tickets_file.seek(0)
+                tickets_file.truncate()
+                json.dump(data, tickets_file, indent=4)
+        else:
+            await ctx.interaction.response.send_message("Este no es un ticket :/", ephemeral=True)
+    else:
+        await ctx.interaction.response.send_message(f"No tienes permisos para hacer esto", ephemeral=True)
 
 @bot.command(name="close", description="Close the current ticket")
 async def excecute_close(ctx: discord.ext.commands.Context, reason: str | None):
