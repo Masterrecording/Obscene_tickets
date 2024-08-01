@@ -1,6 +1,6 @@
 # Author: github.com/Masterreccording
 # Copyright: LICENSE
-# Version: 2.0
+# Version: 2.1
 
 from discord.ext import commands
 from colorama import Fore, Style
@@ -78,6 +78,13 @@ async def printf(text, level="INFO"):
     msg = (f"{current_datetime} "f"{Fore.BLUE}{Style.BRIGHT}{level:<8}{Style.RESET_ALL} "f"{text}")
     print(msg)
 
+def printformatted(text, level="INFO"):
+    date = datetime.datetime.now()
+    formatted_date = date.strftime("%Y-%m-%d %H:%M:%S")
+    current_datetime = (f"{Fore.BLACK}{Style.BRIGHT}{formatted_date[:10]}{Style.RESET_ALL}"f" {Fore.BLACK}{Style.BRIGHT}{formatted_date[11:19]}{Style.RESET_ALL}")
+    msg = (f"{current_datetime} "f"{Fore.BLUE}{Style.BRIGHT}{level:<8}{Style.RESET_ALL} "f"{text}")
+    print("\n"+msg)
+
 async def reload_buttons(messages_to_keep = {}):
     with open("./storage/tickets.json", "r") as tickets_file:
         ticket_data = json.load(tickets_file)
@@ -124,9 +131,8 @@ async def on_ready():
     await bot.tree.sync()
     await printf("Loadding all the tickets...")
     await reload_buttons()
-    await printf("All the tickets have been loaded!")
-    await asyncio.sleep(3.0)
-    await printf(f"{Fore.LIGHTGREEN_EX}All the bot have been loaded successfully"+Style.RESET_ALL)
+    await printf(f"{Fore.LIGHTGREEN_EX}All the tickets have been loaded!"+Style.RESET_ALL)
+    await printf("Press Ctrl + C to stop the bot")
 
 @bot.tree.command(name="setadmin", description="Set the ticket admin role for the server")
 async def execute_setadmin(ctx: discord.Interaction, role: discord.Role):
@@ -301,5 +307,10 @@ async def execute_setup(ctx: commands.Context,
             ticket_file.truncate()
 
 
-
-bot.run(os.getenv("TOKEN"))
+if not os.getenv("TOKEN"):
+    token = input("\nPlease enter your bot token: ")
+    with open(".env", "w", encoding="utf8") as env:
+        env.write(f"TOKEN={token}")
+        printformatted("Token saved to .env file, not asking again...")
+        bot.run(token)
+else: bot.run(os.getenv("TOKEN"))
